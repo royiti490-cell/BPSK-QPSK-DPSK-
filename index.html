@@ -1,0 +1,895 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Modulation Simulator | ECE Lab</title>
+
+<style>
+:root {
+    --bg: #08111f;
+    --panel: #111e31;
+    --panel2: #172841;
+    --text: #eaf2ff;
+    --muted: #9db0ca;
+    --accent: #38bdf8;
+    --green: #34d399;
+    --orange: #fbbf24;
+    --red: #fb7185;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+header {
+    text-align: center;
+    padding: 35px 15px;
+    background: linear-gradient(120deg,#102b50,#153e68,#10233e);
+    border-bottom: 1px solid #29476b;
+}
+
+header h1 {
+    margin: 0;
+    font-size: clamp(25px,4vw,38px);
+}
+
+header p {
+    color: #c4d9f5;
+    margin-top: 12px;
+}
+
+.container {
+    max-width: 1250px;
+    margin: auto;
+    padding: 24px;
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid #263c59;
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 22px;
+    box-shadow: 0 8px 25px #0003;
+}
+
+h2 {
+    font-size: 20px;
+    margin-top: 0;
+    color: var(--accent);
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(190px,1fr));
+    gap: 18px;
+    align-items: end;
+}
+
+label {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+select, input, button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #355477;
+    background: var(--panel2);
+    color: white;
+    font-size: 14px;
+}
+
+input[type="range"] {
+    padding: 0;
+    accent-color: var(--accent);
+}
+
+button {
+    background: linear-gradient(120deg,#0284c7,#2563eb);
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .2s;
+}
+
+button:hover {
+    filter: brightness(1.2);
+    transform: translateY(-2px);
+}
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
+    gap: 14px;
+}
+
+.metric {
+    background: var(--panel2);
+    border: 1px solid #29476b;
+    padding: 18px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.metric small {
+    color: var(--muted);
+    display: block;
+    margin-bottom: 10px;
+}
+
+.metric strong {
+    font-size: 24px;
+    color: var(--green);
+    overflow-wrap: anywhere;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(300px,1fr));
+    gap: 18px;
+}
+
+canvas {
+    width: 100%;
+    background: #07101d;
+    border: 1px solid #29476b;
+    border-radius: 10px;
+    display: block;
+}
+
+.chart-title {
+    margin: 0 0 12px;
+    color: #c9ddf5;
+    font-size: 14px;
+}
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #29405d;
+    text-align: center;
+}
+
+th {
+    color: var(--accent);
+    background: #172841;
+}
+
+td { color: #d1dced; }
+
+.formula {
+    background: #07101d;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent);
+    line-height: 1.9;
+    overflow-wrap: anywhere;
+}
+
+footer {
+    text-align: center;
+    padding: 25px;
+    color: var(--muted);
+    border-top: 1px solid #263c59;
+}
+
+@media(max-width:600px) {
+    .container { padding: 12px; }
+    .card { padding: 15px; }
+    th,td { padding: 8px 4px; font-size: 11px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Digital Modulation Laboratory</h1>
+    <p>Normalized BPSK | Gray-Coded QPSK | DBPSK</p>
+    <p>Carrier Phase Offset and AWGN Performance Simulator</p>
+</header>
+
+<main class="container">
+
+<section class="card">
+    <h2>Simulation Controls</h2>
+
+    <div class="controls">
+
+        <div>
+            <label>Modulation Scheme</label>
+            <select id="scheme">
+                <option value="BPSK">Normalized BPSK</option>
+                <option value="QPSK">Gray-Coded QPSK</option>
+                <option value="DBPSK">DBPSK</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Carrier Phase Offset: <span id="phaseLabel">0°</span></label>
+            <input type="range" id="phase" min="0" max="180" value="0" step="5">
+        </div>
+
+        <div>
+            <label>Eb/N0: <span id="snrLabel">8 dB</span></label>
+            <input type="range" id="snr" min="-2" max="18" value="8" step="1">
+        </div>
+
+        <div>
+            <label>Number of Information Bits</label>
+            <select id="bitCount">
+                <option value="1000">1,000 bits</option>
+                <option value="5000">5,000 bits</option>
+                <option value="10000" selected>10,000 bits</option>
+                <option value="50000">50,000 bits</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Random Seed</label>
+            <input type="number" id="seed" value="42" min="1">
+        </div>
+
+        <div>
+            <button id="run">Run Simulation</button>
+        </div>
+
+    </div>
+</section>
+
+<section class="card">
+    <h2>Performance Results</h2>
+
+    <div class="metrics">
+        <div class="metric">
+            <small>Total Bits</small>
+            <strong id="totalBits">--</strong>
+        </div>
+        <div class="metric">
+            <small>Bit Errors</small>
+            <strong id="errors">--</strong>
+        </div>
+        <div class="metric">
+            <small>Simulated BER</small>
+            <strong id="ber">--</strong>
+        </div>
+        <div class="metric">
+            <small>Symbol Errors</small>
+            <strong id="ser">--</strong>
+        </div>
+        <div class="metric">
+            <small>Eb/N0</small>
+            <strong id="snrResult">--</strong>
+        </div>
+        <div class="metric">
+            <small>Phase Offset</small>
+            <strong id="phaseResult">--</strong>
+        </div>
+    </div>
+</section>
+
+<section class="card">
+    <h2>Signal Visualization</h2>
+
+    <div class="charts">
+
+        <div>
+            <p class="chart-title">Transmitted and Received Signal</p>
+            <canvas id="signalCanvas" height="220"></canvas>
+            <div class="legend">
+                <span><i class="dot" style="background:#38bdf8"></i>Transmitted</span>
+                <span><i class="dot" style="background:#fb7185"></i>Received</span>
+            </div>
+        </div>
+
+        <div>
+            <p class="chart-title">Constellation Diagram</p>
+            <canvas id="constellationCanvas" height="220"></canvas>
+            <div class="legend">
+                <span><i class="dot" style="background:#34d399"></i>Ideal symbols</span>
+                <span><i class="dot" style="background:#fb7185"></i>Received symbols</span>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<section class="card">
+    <h2>Modulation Theory</h2>
+
+    <div class="formula" id="theory">
+        Select a modulation scheme to view its mathematical representation.
+    </div>
+</section>
+
+<section class="card">
+    <h2>Detection Comparison</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Parameter</th>
+                <th>Coherent Detection</th>
+                <th>Differential Detection</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Reference</td>
+                <td>Carrier phase reference</td>
+                <td>Previous received symbol</td>
+            </tr>
+            <tr>
+                <td>Phase Offset</td>
+                <td>Can cause decision errors</td>
+                <td>Constant phase cancels</td>
+            </tr>
+            <tr>
+                <td>Noise</td>
+                <td>AWGN sensitivity</td>
+                <td>Noise from adjacent symbols</td>
+            </tr>
+            <tr>
+                <td>Implementation</td>
+                <td>Carrier synchronization</td>
+                <td>Differential encoding</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p style="color:var(--muted);font-size:13px;line-height:1.7">
+        Note: Differential detection in this simulator refers to DBPSK.
+        QPSK and BPSK use coherent detection. A constant phase offset
+        is assumed throughout each simulated frame.
+    </p>
+</section>
+
+<section class="card">
+    <h2>Simulation Interpretation</h2>
+    <p id="interpretation" style="line-height:1.8;color:#cbd8e8">
+        Run the simulation to see the performance interpretation.
+    </p>
+</section>
+
+</main>
+
+<footer>
+    Digital Communication Systems | B.Tech ECE Laboratory
+    <br><br>
+    Built using HTML, CSS and JavaScript
+</footer>
+
+<script>
+
+// ================================================
+// 1. REPRODUCIBLE RANDOM NUMBER GENERATOR
+// ================================================
+
+function makeRandom(seed) {
+    let state = seed >>> 0;
+
+    return function() {
+        state = (state + 0x6D2B79F5) | 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function gaussian(random) {
+    let u = Math.max(random(), 1e-12);
+    let v = random();
+
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function bitsGenerator(count, random) {
+    return Array.from(
+        {length: count},
+        () => random() < 0.5 ? 0 : 1
+    );
+}
+
+// ================================================
+// 2. NORMALIZED BPSK
+// ================================================
+
+// Mapping:
+// 0 -> +1
+// 1 -> -1
+//
+// Average symbol energy Es = 1
+// Eb = 1
+
+function bpskMap(bits) {
+    return bits.map(b => ({
+        re: b === 0 ? 1 : -1,
+        im: 0
+    }));
+}
+
+function bpskDemap(received) {
+    return received.map(s => s.re < 0 ? 1 : 0);
+}
+
+// ================================================
+// 3. GRAY-CODED QPSK
+// ================================================
+
+// Mapping:
+// 00 -> (+1,+1)/sqrt(2)
+// 01 -> (-1,+1)/sqrt(2)
+// 11 -> (-1,-1)/sqrt(2)
+// 10 -> (+1,-1)/sqrt(2)
+//
+// Es = 1
+// Eb = 1/2
+
+function qpskMap(bits) {
+    const symbols = [];
+    const a = 1 / Math.sqrt(2);
+
+    for (let i = 0; i < bits.length; i += 2) {
+        const b1 = bits[i];
+        const b2 = bits[i + 1];
+
+        const I = b1 === 0 ? 1 : -1;
+        const Q = b2 === 0 ? 1 : -1;
+
+        symbols.push({
+            re: I * a,
+            im: Q * a
+        });
+    }
+
+    return symbols;
+}
+
+function qpskDemap(received) {
+    const bits = [];
+
+    received.forEach(s => {
+        bits.push(s.re < 0 ? 1 : 0);
+        bits.push(s.im < 0 ? 1 : 0);
+    });
+
+    return bits;
+}
+
+// ================================================
+// 4. DBPSK DIFFERENTIAL ENCODING
+// ================================================
+
+// Differential mapping:
+// 0 -> No phase change
+// 1 -> 180-degree phase change
+//
+// Initial reference symbol = +1
+
+function dbpskMap(bits) {
+    const symbols = [];
+    let previous = 1;
+
+    bits.forEach(bit => {
+        if (bit === 1) {
+            previous *= -1;
+        }
+
+        symbols.push({
+            re: previous,
+            im: 0
+        });
+    });
+
+    return symbols;
+}
+
+// Differential detection:
+// Decision based on Re(r[k] * conjugate(r[k-1]))
+
+function dbpskDemap(received) {
+    const bits = [];
+
+    for (let i = 0; i < received.length; i++) {
+        const previous = i === 0
+            ? {re: 1, im: 0}
+            : received[i - 1];
+
+        const current = received[i];
+
+        const product =
+            current.re * previous.re +
+            current.im * previous.im;
+
+        bits.push(product < 0 ? 1 : 0);
+    }
+
+    return bits;
+}
+
+// ================================================
+// 5. CARRIER PHASE ROTATION
+// ================================================
+
+function rotate(symbols, phase) {
+    const c = Math.cos(phase);
+    const s = Math.sin(phase);
+
+    return symbols.map(x => ({
+        re: x.re * c - x.im * s,
+        im: x.re * s + x.im * c
+    }));
+}
+
+// ================================================
+// 6. AWGN CHANNEL
+// ================================================
+
+function addNoise(symbols, ebN0, bitsPerSymbol, random) {
+
+    const Eb = 1 / bitsPerSymbol;
+    const N0 = Eb / ebN0;
+
+    const sigma = Math.sqrt(N0 / 2);
+
+    return symbols.map(s => ({
+        re: s.re + sigma * gaussian(random),
+        im: s.im + sigma * gaussian(random)
+    }));
+}
+
+// ================================================
+// 7. PERFORMANCE CALCULATION
+// ================================================
+
+function calculateBER(original, detected) {
+    let errors = 0;
+
+    for (let i = 0; i < original.length; i++) {
+        if (original[i] !== detected[i]) {
+            errors++;
+        }
+    }
+
+    return {
+        errors,
+        ber: errors / original.length
+    };
+}
+
+function calculateSER(original, detected, bps) {
+    let errors = 0;
+
+    for (let i = 0; i < original.length; i += bps) {
+        let different = false;
+
+        for (let j = 0; j < bps; j++) {
+            if (original[i+j] !== detected[i+j]) {
+                different = true;
+            }
+        }
+
+        if (different) errors++;
+    }
+
+    return errors / (original.length / bps);
+}
+
+// ================================================
+// 8. THEORY INFORMATION
+// ================================================
+
+const theory = {
+    BPSK: `
+        <b>Normalized BPSK</b><br>
+        Mapping: 0 → +1, 1 → −1<br>
+        Signal: s(t) = √(2Eb) cos(2πfct + πb)<br>
+        Symbol energy: Es = Eb = 1 (normalized).<br>
+        Coherent decision: rI &lt; 0 → bit 1, otherwise bit 0.<br>
+        With phase offset θ, the coherent decision variable
+        is proportional to cos(θ).<br><br>
+        Theoretical BER at zero phase offset:<br>
+        Pb = Q(√(2Eb/N0))
+    `,
+
+    QPSK: `
+        <b>Gray-Coded QPSK</b><br>
+        00 → (+1,+1)/√2<br>
+        01 → (−1,+1)/√2<br>
+        11 → (−1,−1)/√2<br>
+        10 → (+1,−1)/√2<br>
+        Average symbol energy: Es = 1.<br>
+        Average bit energy: Eb = 1/2.<br>
+        Coherent detection independently decides I and Q.<br>
+        Phase offset rotates the entire constellation.<br><br>
+        Theoretical BER at zero phase offset:<br>
+        Pb = Q(√(2Eb/N0))
+    `,
+
+    DBPSK: `
+        <b>Differential BPSK</b><br>
+        Initial reference symbol: d[−1] = +1.<br>
+        Differential encoding:<br>
+        d[k] = d[k−1] × (−1)<sup>b[k]</sup><br>
+        0 → no phase change.<br>
+        1 → 180° phase change.<br>
+        Detection: Re{r[k]r*[k−1]}<br>
+        Negative → bit 1; positive → bit 0.<br>
+        A constant carrier phase offset cancels in
+        the adjacent-symbol product.<br><br>
+        Theoretical BER for noncoherent DBPSK in AWGN:<br>
+        Pb = 0.5 exp(−Eb/N0)
+    `
+};
+
+// ================================================
+// 9. CANVAS DRAWING FUNCTIONS
+// ================================================
+
+function setupCanvas(canvas) {
+    const ratio = window.devicePixelRatio || 1;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+    return {ctx, width, height};
+}
+
+function drawSignal(tx, rx) {
+    const canvas = document.getElementById("signalCanvas");
+    const {ctx, width, height} = setupCanvas(canvas);
+
+    ctx.clearRect(0,0,width,height);
+
+    const count = Math.min(tx.length, 80);
+    const mid = height / 2;
+    const scale = height * 0.32;
+
+    ctx.strokeStyle = "#263d58";
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(0,mid);
+    ctx.lineTo(width,mid);
+    ctx.stroke();
+
+    function draw(data,color) {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.7;
+
+        for(let i=0;i<count;i++) {
+            const x = (i/(count-1 || 1))*width;
+            const y = mid-data[i].re*scale;
+
+            if(i===0) ctx.moveTo(x,y);
+            else ctx.lineTo(x,y);
+        }
+
+        ctx.stroke();
+    }
+
+    draw(tx,"#38bdf8");
+    draw(rx,"#fb7185");
+}
+
+function drawConstellation(tx, rx) {
+    const canvas = document.getElementById("constellationCanvas");
+    const {ctx,width,height} = setupCanvas(canvas);
+
+    ctx.clearRect(0,0,width,height);
+
+    const cx = width/2;
+    const cy = height/2;
+    const scale = Math.min(width,height)*0.34;
+
+    ctx.strokeStyle = "#48617e";
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(0,cy);
+    ctx.lineTo(width,cy);
+    ctx.moveTo(cx,0);
+    ctx.lineTo(cx,height);
+    ctx.stroke();
+
+    function point(x,y,color,size) {
+        ctx.beginPath();
+        ctx.fillStyle=color;
+        ctx.arc(cx+x*scale,cy-y*scale,size,0,2*Math.PI);
+        ctx.fill();
+    }
+
+    tx.slice(0,150).forEach(s =>
+        point(s.re,s.im,"#34d399",4)
+    );
+
+    rx.slice(0,150).forEach(s =>
+        point(s.re,s.im,"#fb7185",2.5)
+    );
+
+    ctx.fillStyle="#9db0ca";
+    ctx.font="11px Arial";
+    ctx.fillText("I",width-15,cy-8);
+    ctx.fillText("Q",cx+8,13);
+}
+
+// ================================================
+// 10. MAIN SIMULATION
+// ================================================
+
+function runSimulation() {
+
+    const scheme = document.getElementById("scheme").value;
+
+    const phaseDeg = Number(document.getElementById("phase").value);
+    const phase = phaseDeg*Math.PI/180;
+
+    const snr = Number(document.getElementById("snr").value);
+    const count = Number(document.getElementById("bitCount").value);
+    const seed = Number(document.getElementById("seed").value);
+
+    if (!Number.isFinite(seed) || seed < 1) {
+        alert("Enter a valid positive random seed.");
+        return;
+    }
+
+    const random = makeRandom(seed);
+
+    // QPSK requires an even number of bits.
+    const bitCount = scheme === "QPSK"
+        ? count - count%2
+        : count;
+
+    const bits = bitsGenerator(bitCount,random);
+
+    const bps = scheme === "QPSK" ? 2 : 1;
+
+    let tx;
+
+    if(scheme === "BPSK") {
+        tx = bpskMap(bits);
+    } else if(scheme === "QPSK") {
+        tx = qpskMap(bits);
+    } else {
+        tx = dbpskMap(bits);
+    }
+
+    // Apply carrier phase offset before noise.
+    const rotated = rotate(tx,phase);
+
+    // Linear Eb/N0.
+    const ebN0 = Math.pow(10,snr/10);
+
+    // Add AWGN.
+    const rx = addNoise(rotated,ebN0,bps,random);
+
+    // Detection.
+    let detected;
+
+    if(scheme === "BPSK") {
+        detected = bpskDemap(rx);
+    } else if(scheme === "QPSK") {
+        detected = qpskDemap(rx);
+    } else {
+        detected = dbpskDemap(rx);
+    }
+
+    // Error calculations.
+    const result = calculateBER(bits,detected);
+    const ser = calculateSER(bits,detected,bps);
+
+    document.getElementById("totalBits").textContent =
+        bitCount.toLocaleString();
+
+    document.getElementById("errors").textContent =
+        result.errors.toLocaleString();
+
+    document.getElementById("ber").textContent =
+        result.ber.toExponential(4);
+
+    document.getElementById("ser").textContent =
+        ser.toExponential(4);
+
+    document.getElementById("snrResult").textContent = snr+" dB";
+    document.getElementById("phaseResult").textContent = phaseDeg+"°";
+
+    document.getElementById("theory").innerHTML = theory[scheme];
+
+    // Draw visualization.
+    drawSignal(rotated,rx);
+    drawConstellation(tx,rx);
+
+    // Interpretation.
+    let message = "";
+
+    if(scheme === "DBPSK") {
+        message =
+        `DBPSK uses differential encoding and detection. At a constant
+        carrier phase offset of ${phaseDeg}°, the common phase rotation
+        cancels in the adjacent-symbol product. Noise can still produce
+        errors because two received symbols participate in each decision.`;
+    } else {
+        message =
+        `${scheme} uses coherent detection without carrier phase
+        compensation. The phase offset of ${phaseDeg}° rotates the
+        received constellation. The detector still uses the original
+        I/Q decision axes, so phase mismatch can increase BER.`;
+    }
+
+    message += ` The measured BER is ${result.ber.toExponential(4)}
+    at Eb/N0 = ${snr} dB using ${bitCount.toLocaleString()} bits.
+    This is a finite Monte Carlo estimate and may vary with the random seed.`;
+
+    document.getElementById("interpretation").textContent = message;
+}
+
+// ================================================
+// 11. INTERACTIVE CONTROLS
+// ================================================
+
+document.getElementById("phase").addEventListener("input",e => {
+    document.getElementById("phaseLabel").textContent = e.target.value+"°";
+});
+
+document.getElementById("snr").addEventListener("input",e => {
+    document.getElementById("snrLabel").textContent = e.target.value+" dB";
+});
+
+document.getElementById("run").addEventListener("click",runSimulation);
+
+document.getElementById("scheme").addEventListener("change",runSimulation);
+
+document.getElementById("phase").addEventListener("change",runSimulation);
+
+document.getElementById("snr").addEventListener("change",runSimulation);
+
+document.getElementById("bitCount").addEventListener("change",runSimulation);
+
+window.addEventListener("resize",runSimulation);
+
+// Initial simulation.
+runSimulation();
+
+</script>
+
+</body>
+</html>
